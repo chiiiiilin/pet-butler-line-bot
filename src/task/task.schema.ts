@@ -12,9 +12,6 @@ export class Task {
   @Prop({ required: true })
   intervalDays: number;
 
-  @Prop({ required: true })
-  remindTime: string;
-
   @Prop()
   lastCompletedAt?: Date;
 

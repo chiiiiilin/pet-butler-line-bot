@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule } from '@nestjs/schedule';
 import * as Joi from 'joi';
 import { LineModule } from './line/line.module';
 import { StateModule } from './state/state.module';
 import { TaskModule } from './task/task.module';
 import { BotModule } from './bot/bot.module';
+import { ReminderModule } from './reminder/reminder.module';
 
 @Module({
   imports: [
@@ -27,10 +29,12 @@ import { BotModule } from './bot/bot.module';
         uri: config.get<string>('MONGO_URI'),
       }),
     }),
+    ScheduleModule.forRoot(),
     LineModule,
     StateModule,
     TaskModule,
     BotModule,
+    ReminderModule,
   ],
 })
 export class AppModule {}

@@ -4,12 +4,14 @@ import { StateService } from '../state/state.service';
 import { TaskService } from '../task/task.service';
 import { LineService } from '../line/line.service';
 import { ConversationStateDocument } from '../state/conversation-state.schema';
-import { textMsg, formatDateTime } from './lib/utils';
+import { textMsg, formatDate, dateForPicker } from './lib/utils';
 import { confirmCard } from './flow/confirm-card';
-import { taskListCarousel } from './messages/task-card';
+import { taskListCarousel, taskDetailCard } from './messages/task-card';
+import { dailyTaskCard } from './messages/daily-task-card';
 import { deleteTaskCarousel } from './messages/delete-task-card';
 import { editTaskCarousel } from './messages/edit-task-card';
 import { askFrequency } from './flow/frequency-quick-reply';
+import { askStartDate } from './flow/start-date-quick-reply';
 import { commandsHelp } from './messages/help';
 import { COMMAND } from './lib/commands';
 import { ACTION } from './lib/actions';
@@ -74,7 +76,9 @@ export class BotService {
       if (tasks.length === 0) {
         return reply(replyToken, [textMsg('今天沒有待辦 ✨')]);
       }
-      return reply(replyToken, [taskListCarousel(tasks)]);
+      return reply(replyToken, [
+        dailyTaskCard(tasks, `🐱 今天 ${tasks.length} 個任務`, 'today'),
+      ]);
     }
     if (trimmed === COMMAND.DELETE) {
       const tasks = await this.task.listByGroup(groupId);
@@ -128,27 +132,10 @@ export class BotService {
         if (isNaN(days) || days < 1) {
           return reply(replyToken, [textMsg('請輸入正整數天數，例如 30')]);
         }
-        await this.state.setStep(userId, groupId, 'awaiting_time', {
+        await this.state.setStep(userId, groupId, 'awaiting_start_date', {
           intervalDays: days,
         });
-        return reply(replyToken, [
-          textMsg('請輸入提醒時間，格式 HH:MM，例如 09:00'),
-        ]);
-      }
-
-      case 'awaiting_time': {
-        if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(text)) {
-          return reply(replyToken, [
-            textMsg('格式錯誤，請輸入 HH:MM，例如 09:00'),
-          ]);
-        }
-        const updated = await this.state.setStep(
-          userId,
-          groupId,
-          'awaiting_confirm',
-          { remindTime: text },
-        );
-        return reply(replyToken, [confirmCard(updated.tempData)]);
+        return reply(replyToken, [askStartDate()]);
       }
 
       case 'awaiting_edit_name': {
@@ -190,26 +177,8 @@ export class BotService {
         ]);
       }
 
-      case 'awaiting_edit_time': {
-        if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(text)) {
-          return reply(replyToken, [
-            textMsg('格式錯誤，請輸入 HH:MM，例如 09:00'),
-          ]);
-        }
-        const taskId = state.tempData.editTaskId;
-        if (!taskId) {
-          await this.state.clear(userId, groupId);
-          return reply(replyToken, [
-            textMsg(`狀態錯誤，請重新 ${COMMAND.EDIT}`),
-          ]);
-        }
-        const updated = await this.task.update(taskId, { remindTime: text });
-        await this.state.clear(userId, groupId);
-        if (!updated) return reply(replyToken, [textMsg('任務不存在')]);
-        return reply(replyToken, [textMsg(`⏰ 已改時間為 ${text}`)]);
-      }
-
       case 'awaiting_frequency':
+      case 'awaiting_start_date':
       case 'awaiting_edit_freq':
       case 'awaiting_confirm':
         return reply(replyToken, [
@@ -238,7 +207,7 @@ export class BotService {
       if (!task) return reply(replyToken, [textMsg('任務不存在')]);
       return reply(replyToken, [
         textMsg(
-          `✅ 已完成「${task.name}」(by ${displayName})\n下次提醒：${formatDateTime(task.nextDueAt)}`,
+          `✅ 已完成「${task.name}」(by ${displayName})\n下次提醒：${formatDate(task.nextDueAt)}`,
         ),
       ]);
     }
@@ -251,7 +220,7 @@ export class BotService {
       if (!task) return reply(replyToken, [textMsg('任務不存在')]);
       return reply(replyToken, [
         textMsg(
-          `⏭ 已忽略「${task.name}」\n下次提醒：${formatDateTime(task.nextDueAt)}`,
+          `⏭ 已忽略「${task.name}」\n下次提醒：${formatDate(task.nextDueAt)}`,
         ),
       ]);
     }
@@ -263,6 +232,14 @@ export class BotService {
       return reply(replyToken, [textMsg(ok ? '已刪除任務' : '任務不存在')]);
     }
 
+    if (action === ACTION.SHOW) {
+      const id = params.get('id');
+      if (!id) return null;
+      const task = await this.task.findById(id);
+      if (!task) return reply(replyToken, [textMsg('任務不存在')]);
+      return reply(replyToken, [taskDetailCard(task)]);
+    }
+
     if (action === ACTION.EDIT_DATE) {
       const id = params.get('id');
       const dateStr = event.postback.params?.date;
@@ -271,7 +248,7 @@ export class BotService {
       if (!task) return reply(replyToken, [textMsg('任務不存在')]);
       return reply(replyToken, [
         textMsg(
-          `📅 已改下次日期「${task.name}」\n下次提醒：${formatDateTime(task.nextDueAt)}`,
+          `📅 已改下次日期「${task.name}」\n下次提醒：${formatDate(task.nextDueAt)}`,
         ),
       ]);
     }
@@ -294,17 +271,6 @@ export class BotService {
       return reply(replyToken, [askFrequency()]);
     }
 
-    if (action === ACTION.EDIT_TIME) {
-      const id = params.get('id');
-      if (!id) return null;
-      await this.state.setStep(userId, groupId, 'awaiting_edit_time', {
-        editTaskId: id,
-      });
-      return reply(replyToken, [
-        textMsg('請輸入新的提醒時間，格式 HH:MM，例如 09:00'),
-      ]);
-    }
-
     const state = await this.state.get(userId, groupId);
     if (!state) return null;
 
@@ -316,12 +282,37 @@ export class BotService {
       }
       const intervalDays = parseInt(value ?? '', 10);
       if (isNaN(intervalDays)) return null;
-      await this.state.setStep(userId, groupId, 'awaiting_time', {
+      await this.state.setStep(userId, groupId, 'awaiting_start_date', {
         intervalDays,
       });
-      return reply(replyToken, [
-        textMsg('請輸入提醒時間，格式 HH:MM，例如 09:00'),
-      ]);
+      return reply(replyToken, [askStartDate()]);
+    }
+
+    if (
+      action === ACTION.START_DATE &&
+      state.step === 'awaiting_start_date'
+    ) {
+      let dateStr: string | null = null;
+      if (event.postback.params && 'date' in event.postback.params) {
+        dateStr = event.postback.params.date ?? null;
+      } else {
+        const value = params.get('value');
+        if (value === 'today') {
+          dateStr = dateForPicker(new Date());
+        } else if (value === 'tomorrow') {
+          const tmrw = new Date();
+          tmrw.setDate(tmrw.getDate() + 1);
+          dateStr = dateForPicker(tmrw);
+        }
+      }
+      if (!dateStr) return null;
+      const updated = await this.state.setStep(
+        userId,
+        groupId,
+        'awaiting_confirm',
+        { startDate: dateStr },
+      );
+      return reply(replyToken, [confirmCard(updated.tempData)]);
     }
 
     if (action === ACTION.FREQ && state.step === 'awaiting_edit_freq') {
@@ -352,18 +343,23 @@ export class BotService {
     }
 
     if (action === ACTION.CONFIRM && state.step === 'awaiting_confirm') {
-      const { name, intervalDays, remindTime } = state.tempData;
-      if (!name || !intervalDays || !remindTime) {
+      const { name, intervalDays, startDate } = state.tempData;
+      if (!name || !intervalDays || !startDate) {
         await this.state.clear(userId, groupId);
         return reply(replyToken, [
           textMsg(`資料不完整，請重新 ${COMMAND.CREATE}`),
         ]);
       }
-      await this.task.create({ groupId, name, intervalDays, remindTime });
+      const created = await this.task.create({
+        groupId,
+        name,
+        intervalDays,
+        startDate,
+      });
       await this.state.clear(userId, groupId);
       return reply(replyToken, [
         textMsg(
-          `✅ 任務已建立\n名稱：${name}\n頻率：每 ${intervalDays} 天\n提醒時間：${remindTime}`,
+          `✅ 任務已建立\n名稱：${name}\n頻率：每 ${intervalDays} 天\n首次提醒：${formatDate(created.nextDueAt)}`,
         ),
       ]);
     }

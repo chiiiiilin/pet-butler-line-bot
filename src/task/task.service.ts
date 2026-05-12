@@ -3,6 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Task, TaskDocument } from './task.schema';
 
+const DEFAULT_REMIND_HOUR = 9;
+
 @Injectable()
 export class TaskService {
   constructor(
@@ -14,14 +16,21 @@ export class TaskService {
     groupId: string;
     name: string;
     intervalDays: number;
-    remindTime: string;
+    startDate?: string;
   }): Promise<TaskDocument> {
-    const nextDueAt = computeNextDue(
-      new Date(),
-      input.intervalDays,
-      input.remindTime,
-    );
-    return this.model.create({ ...input, nextDueAt });
+    let nextDueAt: Date;
+    if (input.startDate) {
+      const [y, m, d] = input.startDate.split('-').map(Number);
+      nextDueAt = new Date(y, m - 1, d, DEFAULT_REMIND_HOUR, 0, 0, 0);
+    } else {
+      nextDueAt = computeNextDue(new Date(), input.intervalDays);
+    }
+    return this.model.create({
+      groupId: input.groupId,
+      name: input.name,
+      intervalDays: input.intervalDays,
+      nextDueAt,
+    });
   }
 
   async listByGroup(groupId: string): Promise<TaskDocument[]> {
@@ -38,6 +47,16 @@ export class TaskService {
       .exec();
   }
 
+  async findDueGroupIds(): Promise<string[]> {
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setHours(0, 0, 0, 0);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const result = await this.model
+      .distinct('groupId', { nextDueAt: { $lt: startOfTomorrow } })
+      .exec();
+    return result as string[];
+  }
+
   async findById(id: string): Promise<TaskDocument | null> {
     if (!Types.ObjectId.isValid(id)) return null;
     return this.model.findById(id).exec();
@@ -49,14 +68,16 @@ export class TaskService {
     const now = new Date();
     task.lastCompletedAt = now;
     if (byName) task.lastCompletedBy = byName;
-    task.nextDueAt = computeNextDue(now, task.intervalDays, task.remindTime);
+    task.nextDueAt = computeNextDue(now, task.intervalDays);
     return task.save();
   }
 
   async snooze(id: string, dateStr: string): Promise<TaskDocument | null> {
     const task = await this.findById(id);
     if (!task) return null;
-    const next = new Date(`${dateStr}T${task.remindTime}:00`);
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const next = new Date(y, m - 1, d, DEFAULT_REMIND_HOUR, 0, 0, 0);
     if (isNaN(next.getTime())) return null;
     task.nextDueAt = next;
     return task.save();
@@ -67,7 +88,6 @@ export class TaskService {
     patch: Partial<{
       name: string;
       intervalDays: number;
-      remindTime: string;
       nextDueAt: Date;
     }>,
   ): Promise<TaskDocument | null> {
@@ -84,14 +104,9 @@ export class TaskService {
   }
 }
 
-function computeNextDue(
-  from: Date,
-  intervalDays: number,
-  remindTime: string,
-): Date {
-  const [hh, mm] = remindTime.split(':').map(Number);
+function computeNextDue(from: Date, intervalDays: number): Date {
   const next = new Date(from);
   next.setDate(next.getDate() + intervalDays);
-  next.setHours(hh, mm, 0, 0);
+  next.setHours(DEFAULT_REMIND_HOUR, 0, 0, 0);
   return next;
 }

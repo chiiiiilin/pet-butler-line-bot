@@ -1,0 +1,53 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
+import { TaskService } from '../task/task.service';
+import { LineService } from '../line/line.service';
+import { dailyTaskCard } from '../bot/messages/daily-task-card';
+
+export type ReminderTime = 'morning' | 'evening';
+
+@Injectable()
+export class ReminderService {
+  private readonly logger = new Logger(ReminderService.name);
+
+  constructor(
+    private readonly task: TaskService,
+    private readonly line: LineService,
+  ) {}
+
+  @Cron('0 9 * * *', { name: 'morning', timeZone: 'Asia/Taipei' })
+  async morningCron(): Promise<void> {
+    await this.sendDailyReminders('morning');
+  }
+
+  @Cron('0 21 * * *', { name: 'evening', timeZone: 'Asia/Taipei' })
+  async eveningCron(): Promise<void> {
+    await this.sendDailyReminders('evening');
+  }
+
+  async sendDailyReminders(
+    time: ReminderTime,
+  ): Promise<{ groupsNotified: number }> {
+    const groupIds = await this.task.findDueGroupIds();
+    let groupsNotified = 0;
+
+    for (const groupId of groupIds) {
+      try {
+        const tasks = await this.task.listDueByGroup(groupId);
+        if (tasks.length === 0) continue;
+        const intro =
+          time === 'morning'
+            ? `🐱 早安！今天 ${tasks.length} 個任務`
+            : `🌙 晚安！還有 ${tasks.length} 個任務沒完成`;
+        const dest = groupId.startsWith('dm:') ? groupId.slice(3) : groupId;
+        await this.line.push(dest, [dailyTaskCard(tasks, intro, time)]);
+        groupsNotified++;
+      } catch (e) {
+        this.logger.warn(`push to ${groupId} failed: ${e}`);
+      }
+    }
+
+    this.logger.log(`${time} reminder: notified ${groupsNotified} group(s)`);
+    return { groupsNotified };
+  }
+}

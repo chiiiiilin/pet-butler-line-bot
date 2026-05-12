@@ -46,7 +46,7 @@ function deleteTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
             },
             {
               type: 'text',
-              text: `每 ${task.intervalDays} 天 · ${task.remindTime}`,
+              text: `每 ${task.intervalDays} 天`,
               size: 'sm',
               flex: 5,
             },

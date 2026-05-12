@@ -1,6 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { TaskDocument } from '../../task/task.schema';
-import { dateForPicker, formatDateTime } from '../lib/utils';
+import { dateForPicker, formatDate, formatDateTime } from '../lib/utils';
 import { ACTION } from '../lib/actions';
 
 export function taskListCarousel(
@@ -13,6 +13,14 @@ export function taskListCarousel(
       type: 'carousel',
       contents: tasks.slice(0, 12).map(taskBubble),
     },
+  };
+}
+
+export function taskDetailCard(task: TaskDocument): messagingApi.FlexMessage {
+  return {
+    type: 'flex',
+    altText: task.name,
+    contents: taskBubble(task),
   };
 }
 
@@ -61,7 +69,7 @@ function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
         { type: 'text', text: '頻率', size: 'sm', color: '#888888', flex: 2 },
         {
           type: 'text',
-          text: `每 ${task.intervalDays} 天 · ${task.remindTime}`,
+          text: `每 ${task.intervalDays} 天`,
           size: 'sm',
           flex: 5,
         },
@@ -75,7 +83,7 @@ function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
         { type: 'text', text: '下次', size: 'sm', color: '#888888', flex: 2 },
         {
           type: 'text',
-          text: formatDateTime(task.nextDueAt),
+          text: formatDate(task.nextDueAt),
           size: 'sm',
           flex: 5,
         },

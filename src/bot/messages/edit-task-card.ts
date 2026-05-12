@@ -1,6 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { TaskDocument } from '../../task/task.schema';
-import { dateForPicker, formatDateTime } from '../lib/utils';
+import { dateForPicker, formatDate } from '../lib/utils';
 import { ACTION } from '../lib/actions';
 
 export function editTaskCarousel(
@@ -53,7 +53,7 @@ function editTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
             },
             {
               type: 'text',
-              text: `每 ${task.intervalDays} 天 · ${task.remindTime}`,
+              text: `每 ${task.intervalDays} 天`,
               size: 'sm',
               flex: 5,
             },
@@ -73,7 +73,7 @@ function editTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
             },
             {
               type: 'text',
-              text: formatDateTime(task.nextDueAt),
+              text: formatDate(task.nextDueAt),
               size: 'sm',
               flex: 5,
             },
@@ -106,17 +106,6 @@ function editTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
             label: '🔁 改頻率',
             data: `action=${ACTION.EDIT_FREQ}&id=${id}`,
             displayText: '改頻率',
-          },
-        },
-        {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '⏰ 改時間',
-            data: `action=${ACTION.EDIT_TIME}&id=${id}`,
-            displayText: '改時間',
           },
         },
         {

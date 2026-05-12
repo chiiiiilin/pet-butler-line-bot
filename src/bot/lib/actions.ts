@@ -9,6 +9,8 @@ export const ACTION = {
   CONFIRM: 'confirm',
   CANCEL: 'cancel',
   FREQ: 'freq',
+  SHOW: 'show',
+  START_DATE: 'startDate',
 } as const;
 
 export type PostbackAction = (typeof ACTION)[keyof typeof ACTION];

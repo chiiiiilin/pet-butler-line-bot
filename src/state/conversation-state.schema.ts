@@ -5,17 +5,16 @@ export type ConversationStep =
   | 'awaiting_name'
   | 'awaiting_frequency'
   | 'awaiting_custom_days'
-  | 'awaiting_time'
+  | 'awaiting_start_date'
   | 'awaiting_confirm'
   | 'awaiting_edit_name'
   | 'awaiting_edit_freq'
-  | 'awaiting_edit_freq_custom'
-  | 'awaiting_edit_time';
+  | 'awaiting_edit_freq_custom';
 
 export interface TempData {
   name?: string;
   intervalDays?: number;
-  remindTime?: string;
+  startDate?: string;
   editTaskId?: string;
 }
 

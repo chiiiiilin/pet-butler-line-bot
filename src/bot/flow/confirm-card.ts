@@ -1,6 +1,7 @@
 import { messagingApi } from '@line/bot-sdk';
 import { TempData } from '../../state/conversation-state.schema';
 import { ACTION } from '../lib/actions';
+import { formatDateOnly } from '../lib/utils';
 
 export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
   return {
@@ -62,14 +63,16 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: '時間',
+                text: '開始',
                 size: 'sm',
                 color: '#888888',
                 flex: 2,
               },
               {
                 type: 'text',
-                text: tempData.remindTime ?? '',
+                text: tempData.startDate
+                  ? formatDateOnly(tempData.startDate)
+                  : '',
                 size: 'sm',
                 flex: 5,
               },
