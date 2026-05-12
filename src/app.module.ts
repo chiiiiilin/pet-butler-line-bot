@@ -1,11 +1,36 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import * as Joi from 'joi';
 import { LineModule } from './line/line.module';
+import { StateModule } from './state/state.module';
+import { TaskModule } from './task/task.module';
+import { BotModule } from './bot/bot.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        LINE_CHANNEL_SECRET: Joi.string().required(),
+        LINE_CHANNEL_ACCESS_TOKEN: Joi.string().required(),
+        MONGO_URI: Joi.string().required(),
+        PORT: Joi.number().default(3000),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
+      }),
+    }),
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGO_URI'),
+      }),
+    }),
     LineModule,
+    StateModule,
+    TaskModule,
+    BotModule,
   ],
 })
 export class AppModule {}

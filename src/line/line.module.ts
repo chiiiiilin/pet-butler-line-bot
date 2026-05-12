@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { LineController } from './line.controller';
-import { LineService } from './line.service';
+import { LineApiModule } from './line-api.module';
+import { BotModule } from '../bot/bot.module';
 
 @Module({
+  imports: [LineApiModule, BotModule],
   controllers: [LineController],
-  providers: [LineService],
 })
 export class LineModule {}

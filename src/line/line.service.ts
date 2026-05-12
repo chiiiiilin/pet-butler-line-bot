@@ -14,23 +14,40 @@ export class LineService {
     });
   }
 
-  async handleEvent(event: webhook.Event): Promise<void> {
-    this.logger.log(`Event type: ${event.type}`);
+  async reply(
+    replyToken: string,
+    messages: messagingApi.Message[],
+  ): Promise<void> {
+    await this.client.replyMessage({ replyToken, messages });
+  }
 
-    if (
-      event.type === 'message' &&
-      event.message.type === 'text' &&
-      event.replyToken
-    ) {
-      await this.client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [
-          {
-            type: 'text',
-            text: `收到: ${event.message.text}`,
-          },
-        ],
-      });
+  async getDisplayName(
+    userId: string,
+    source: webhook.Source,
+  ): Promise<string> {
+    try {
+      if (source.type === 'group') {
+        const profile = await this.client.getGroupMemberProfile(
+          source.groupId,
+          userId,
+        );
+        return profile.displayName;
+      }
+      if (source.type === 'room') {
+        const profile = await this.client.getRoomMemberProfile(
+          source.roomId,
+          userId,
+        );
+        return profile.displayName;
+      }
+      if (source.type === 'user') {
+        const profile = await this.client.getProfile(userId);
+        return profile.displayName;
+      }
+      return userId;
+    } catch (e) {
+      this.logger.warn(`getDisplayName failed for ${userId}: ${e}`);
+      return userId;
     }
   }
 }

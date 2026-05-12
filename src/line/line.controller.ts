@@ -12,6 +12,7 @@ import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { validateSignature, webhook } from '@line/bot-sdk';
 import { LineService } from './line.service';
+import { BotService } from '../bot/bot.service';
 
 @Controller('webhook')
 export class LineController {
@@ -19,7 +20,8 @@ export class LineController {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly lineService: LineService,
+    private readonly line: LineService,
+    private readonly bot: BotService,
   ) {}
 
   @Post()
@@ -42,7 +44,10 @@ export class LineController {
     this.logger.log(`Received ${events.length} event(s)`);
 
     for (const event of events) {
-      await this.lineService.handleEvent(event);
+      const intent = await this.bot.handleEvent(event);
+      if (intent) {
+        await this.line.reply(intent.replyToken, intent.messages);
+      }
     }
 
     return 'OK';
