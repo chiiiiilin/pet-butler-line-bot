@@ -6,7 +6,8 @@ import { LineApiModule } from '../line/line-api.module';
 
 @Module({
   imports: [TaskModule, LineApiModule],
-  controllers: [ReminderController],
+  controllers:
+    process.env.NODE_ENV === 'production' ? [] : [ReminderController],
   providers: [ReminderService],
 })
 export class ReminderModule {}
