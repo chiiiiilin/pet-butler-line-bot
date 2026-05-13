@@ -30,10 +30,12 @@ function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const isOverdue = task.nextDueAt < startOfToday;
+  const startOfDueDate = new Date(task.nextDueAt);
+  startOfDueDate.setHours(0, 0, 0, 0);
+  const isOverdue = startOfDueDate < startOfToday;
   const daysOverdue = isOverdue
-    ? Math.floor(
-        (startOfToday.getTime() - task.nextDueAt.getTime()) /
+    ? Math.round(
+        (startOfToday.getTime() - startOfDueDate.getTime()) /
           (1000 * 60 * 60 * 24),
       )
     : 0;
