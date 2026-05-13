@@ -1,15 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-export type ConversationStep =
-  | 'awaiting_name'
-  | 'awaiting_frequency'
-  | 'awaiting_custom_days'
-  | 'awaiting_start_date'
-  | 'awaiting_confirm'
-  | 'awaiting_edit_name'
-  | 'awaiting_edit_freq'
-  | 'awaiting_edit_freq_custom';
+export const STEP = {
+  AWAITING_NAME: 'awaiting_name',
+  AWAITING_FREQUENCY: 'awaiting_frequency',
+  AWAITING_CUSTOM_DAYS: 'awaiting_custom_days',
+  AWAITING_START_DATE: 'awaiting_start_date',
+  AWAITING_CONFIRM: 'awaiting_confirm',
+  AWAITING_EDIT_NAME: 'awaiting_edit_name',
+  AWAITING_EDIT_FREQ: 'awaiting_edit_freq',
+  AWAITING_EDIT_FREQ_CUSTOM: 'awaiting_edit_freq_custom',
+} as const;
+
+export type ConversationStep = (typeof STEP)[keyof typeof STEP];
 
 export interface TempData {
   name?: string;

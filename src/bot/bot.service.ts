@@ -3,7 +3,10 @@ import { webhook, messagingApi } from '@line/bot-sdk';
 import { StateService } from '../state/state.service';
 import { TaskService, TaskView } from '../task/task.service';
 import { LineService } from '../line/line.service';
-import { ConversationStateDocument } from '../state/conversation-state.schema';
+import {
+  ConversationStateDocument,
+  STEP,
+} from '../state/conversation-state.schema';
 import { textMsg, formatDate, dateForPicker } from './lib/utils';
 import { confirmCard } from './flow/confirm-card';
 import { taskListCarousel, taskDetailCard } from './messages/task-card';
@@ -59,7 +62,7 @@ export class BotService {
       return reply(replyToken, [textMsg('已取消')]);
     }
     if (trimmed === COMMAND.CREATE) {
-      await this.state.setStep(userId, groupId, 'awaiting_name', {});
+      await this.state.setStep(userId, groupId, STEP.AWAITING_NAME, {});
       return reply(replyToken, [textMsg('請輸入任務名稱：')]);
     }
     if (trimmed === COMMAND.LIST) {
@@ -118,28 +121,28 @@ export class BotService {
     groupId: string,
   ): Promise<ReplyIntent> {
     switch (state.step) {
-      case 'awaiting_name': {
+      case STEP.AWAITING_NAME: {
         if (!text) {
           return reply(replyToken, [textMsg('請輸入任務名稱：')]);
         }
-        await this.state.setStep(userId, groupId, 'awaiting_frequency', {
+        await this.state.setStep(userId, groupId, STEP.AWAITING_FREQUENCY, {
           name: text,
         });
         return reply(replyToken, [askFrequency()]);
       }
 
-      case 'awaiting_custom_days': {
+      case STEP.AWAITING_CUSTOM_DAYS: {
         const days = parseInt(text, 10);
         if (isNaN(days) || days < 1) {
           return reply(replyToken, [textMsg('請輸入正整數天數，例如 30')]);
         }
-        await this.state.setStep(userId, groupId, 'awaiting_start_date', {
+        await this.state.setStep(userId, groupId, STEP.AWAITING_START_DATE, {
           intervalDays: days,
         });
         return reply(replyToken, [askStartDate()]);
       }
 
-      case 'awaiting_edit_name': {
+      case STEP.AWAITING_EDIT_NAME: {
         if (!text) return reply(replyToken, [textMsg('請輸入新名稱：')]);
         const taskId = state.tempData.editTaskId;
         if (!taskId) {
@@ -154,7 +157,7 @@ export class BotService {
         return reply(replyToken, [textMsg(`✏️ 已改名為「${updated.name}」`)]);
       }
 
-      case 'awaiting_edit_freq_custom': {
+      case STEP.AWAITING_EDIT_FREQ_CUSTOM: {
         const days = parseInt(text, 10);
         if (isNaN(days) || days < 1) {
           return reply(replyToken, [textMsg('請輸入正整數天數，例如 30')]);
@@ -174,10 +177,10 @@ export class BotService {
         return reply(replyToken, [textMsg(`🔁 已改頻率為每 ${days} 天`)]);
       }
 
-      case 'awaiting_frequency':
-      case 'awaiting_start_date':
-      case 'awaiting_edit_freq':
-      case 'awaiting_confirm':
+      case STEP.AWAITING_FREQUENCY:
+      case STEP.AWAITING_START_DATE:
+      case STEP.AWAITING_EDIT_FREQ:
+      case STEP.AWAITING_CONFIRM:
         return reply(replyToken, [
           textMsg(`請點上方按鈕，或輸入 ${COMMAND.CANCEL} 退出`),
         ]);
@@ -256,7 +259,7 @@ export class BotService {
     if (action === ACTION.EDIT_NAME) {
       const id = params.get('id');
       if (!id) return null;
-      await this.state.setStep(userId, groupId, 'awaiting_edit_name', {
+      await this.state.setStep(userId, groupId, STEP.AWAITING_EDIT_NAME, {
         editTaskId: id,
       });
       return reply(replyToken, [textMsg('請輸入新名稱：')]);
@@ -265,7 +268,7 @@ export class BotService {
     if (action === ACTION.EDIT_FREQ) {
       const id = params.get('id');
       if (!id) return null;
-      await this.state.setStep(userId, groupId, 'awaiting_edit_freq', {
+      await this.state.setStep(userId, groupId, STEP.AWAITING_EDIT_FREQ, {
         editTaskId: id,
       });
       return reply(replyToken, [askFrequency()]);
@@ -274,27 +277,35 @@ export class BotService {
     const state = await this.state.get(userId, groupId);
     if (!state) return null;
 
-    if (action === ACTION.FREQ && state.step === 'awaiting_frequency') {
+    if (action === ACTION.FREQ && state.step === STEP.AWAITING_FREQUENCY) {
       const value = params.get('value');
       if (value === 'custom') {
-        await this.state.setStep(userId, groupId, 'awaiting_custom_days', {});
+        await this.state.setStep(
+          userId,
+          groupId,
+          STEP.AWAITING_CUSTOM_DAYS,
+          {},
+        );
         return reply(replyToken, [textMsg('請輸入幾天，例如 30：')]);
       }
       if (value === 'oneoff') {
-        await this.state.setStep(userId, groupId, 'awaiting_start_date', {
+        await this.state.setStep(userId, groupId, STEP.AWAITING_START_DATE, {
           intervalDays: null,
         });
         return reply(replyToken, [askStartDate()]);
       }
       const intervalDays = parseInt(value ?? '', 10);
       if (isNaN(intervalDays)) return null;
-      await this.state.setStep(userId, groupId, 'awaiting_start_date', {
+      await this.state.setStep(userId, groupId, STEP.AWAITING_START_DATE, {
         intervalDays,
       });
       return reply(replyToken, [askStartDate()]);
     }
 
-    if (action === ACTION.START_DATE && state.step === 'awaiting_start_date') {
+    if (
+      action === ACTION.START_DATE &&
+      state.step === STEP.AWAITING_START_DATE
+    ) {
       let dateStr: string | null = null;
       if (event.postback.params && 'date' in event.postback.params) {
         dateStr = event.postback.params.date ?? null;
@@ -312,16 +323,20 @@ export class BotService {
       const updated = await this.state.setStep(
         userId,
         groupId,
-        'awaiting_confirm',
+        STEP.AWAITING_CONFIRM,
         { startDate: dateStr },
       );
       return reply(replyToken, [confirmCard(updated.tempData)]);
     }
 
-    if (action === ACTION.FREQ && state.step === 'awaiting_edit_freq') {
+    if (action === ACTION.FREQ && state.step === STEP.AWAITING_EDIT_FREQ) {
       const value = params.get('value');
       if (value === 'custom') {
-        await this.state.setStep(userId, groupId, 'awaiting_edit_freq_custom');
+        await this.state.setStep(
+          userId,
+          groupId,
+          STEP.AWAITING_EDIT_FREQ_CUSTOM,
+        );
         return reply(replyToken, [textMsg('請輸入幾天，例如 30：')]);
       }
       const taskId = state.tempData.editTaskId;
@@ -346,7 +361,7 @@ export class BotService {
       return reply(replyToken, [textMsg('已取消')]);
     }
 
-    if (action === ACTION.CONFIRM && state.step === 'awaiting_confirm') {
+    if (action === ACTION.CONFIRM && state.step === STEP.AWAITING_CONFIRM) {
       const { name, intervalDays, startDate } = state.tempData;
       if (!name || intervalDays === undefined || !startDate) {
         await this.state.clear(userId, groupId);
