@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
+export type TaskStatus = 'active' | 'done';
+
 @Schema({ timestamps: true })
 export class Task {
   @Prop({ required: true })
@@ -9,14 +11,11 @@ export class Task {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ required: true })
-  intervalDays: number;
+  @Prop({ type: Number, default: null })
+  intervalDays: number | null;
 
-  @Prop()
-  lastCompletedAt?: Date;
-
-  @Prop()
-  lastCompletedBy?: string;
+  @Prop({ required: true, enum: ['active', 'done'], default: 'active' })
+  status: TaskStatus;
 
   @Prop({ required: true })
   nextDueAt: Date;

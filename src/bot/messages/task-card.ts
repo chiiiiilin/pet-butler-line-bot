@@ -1,31 +1,38 @@
 import { messagingApi } from '@line/bot-sdk';
-import { TaskDocument } from '../../task/task.schema';
+import { TaskView } from '../../task/task.service';
 import { dateForPicker, formatDate, formatDateTime } from '../lib/utils';
 import { ACTION } from '../lib/actions';
 
 export function taskListCarousel(
-  tasks: TaskDocument[],
+  tasks: TaskView[],
+  nameMap: Map<string, string>,
 ): messagingApi.FlexMessage {
   return {
     type: 'flex',
     altText: '任務列表',
     contents: {
       type: 'carousel',
-      contents: tasks.slice(0, 12).map(taskBubble),
+      contents: tasks.slice(0, 12).map((t) => taskBubble(t, nameMap)),
     },
   };
 }
 
-export function taskDetailCard(task: TaskDocument): messagingApi.FlexMessage {
+export function taskDetailCard(
+  task: TaskView,
+  nameMap: Map<string, string>,
+): messagingApi.FlexMessage {
   return {
     type: 'flex',
     altText: task.name,
-    contents: taskBubble(task),
+    contents: taskBubble(task, nameMap),
   };
 }
 
-function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
-  const id = String(task._id);
+function taskBubble(
+  task: TaskView,
+  nameMap: Map<string, string>,
+): messagingApi.FlexBubble {
+  const id = task._id;
   const today = dateForPicker(new Date());
 
   const startOfToday = new Date();
@@ -61,6 +68,9 @@ function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
     });
   }
 
+  const freqText =
+    task.intervalDays == null ? '不重複' : `每 ${task.intervalDays} 天`;
+
   bodyContents.push(
     { type: 'separator', margin: 'md' },
     {
@@ -71,7 +81,7 @@ function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
         { type: 'text', text: '頻率', size: 'sm', color: '#888888', flex: 2 },
         {
           type: 'text',
-          text: `每 ${task.intervalDays} 天`,
+          text: freqText,
           size: 'sm',
           flex: 5,
         },
@@ -93,10 +103,10 @@ function taskBubble(task: TaskDocument): messagingApi.FlexBubble {
     },
   );
 
-  if (task.lastCompletedAt) {
-    const completedText = task.lastCompletedBy
-      ? `${formatDateTime(task.lastCompletedAt)} (${task.lastCompletedBy})`
-      : formatDateTime(task.lastCompletedAt);
+  if (task.lastCompletion) {
+    const byName =
+      nameMap.get(task.lastCompletion.userId) ?? task.lastCompletion.userId;
+    const completedText = `${formatDateTime(task.lastCompletion.completedAt)} (${byName})`;
     bodyContents.push({
       type: 'box',
       layout: 'baseline',

@@ -38,9 +38,27 @@ export function askFrequency(): messagingApi.TextMessage {
           type: 'action',
           action: {
             type: 'postback',
+            label: '每季',
+            data: `action=${ACTION.FREQ}&value=90`,
+            displayText: '每季',
+          },
+        },
+        {
+          type: 'action',
+          action: {
+            type: 'postback',
             label: '自訂天數',
             data: `action=${ACTION.FREQ}&value=custom`,
             displayText: '自訂天數',
+          },
+        },
+        {
+          type: 'action',
+          action: {
+            type: 'postback',
+            label: '不重複',
+            data: `action=${ACTION.FREQ}&value=oneoff`,
+            displayText: '不重複',
           },
         },
       ],

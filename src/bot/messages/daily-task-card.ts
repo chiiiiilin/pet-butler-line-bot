@@ -1,11 +1,11 @@
 import { messagingApi } from '@line/bot-sdk';
-import { TaskDocument } from '../../task/task.schema';
+import { TaskView } from '../../task/task.service';
 import { ACTION } from '../lib/actions';
 
 export type CardContext = 'morning' | 'evening' | 'today';
 
 export function dailyTaskCard(
-  tasks: TaskDocument[],
+  tasks: TaskView[],
   intro: string,
   context: CardContext = 'today',
 ): messagingApi.FlexMessage {
@@ -49,15 +49,14 @@ export function dailyTaskCard(
   };
 }
 
-function taskRow(
-  task: TaskDocument,
-  startOfToday: Date,
-): messagingApi.FlexBox {
-  const id = String(task._id);
-  const isOverdue = task.nextDueAt < startOfToday;
+function taskRow(task: TaskView, startOfToday: Date): messagingApi.FlexBox {
+  const id = task._id;
+  const startOfDueDate = new Date(task.nextDueAt);
+  startOfDueDate.setHours(0, 0, 0, 0);
+  const isOverdue = startOfDueDate < startOfToday;
   const daysOverdue = isOverdue
-    ? Math.floor(
-        (startOfToday.getTime() - task.nextDueAt.getTime()) /
+    ? Math.round(
+        (startOfToday.getTime() - startOfDueDate.getTime()) /
           (1000 * 60 * 60 * 24),
       )
     : 0;

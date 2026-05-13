@@ -13,7 +13,7 @@ export type ConversationStep =
 
 export interface TempData {
   name?: string;
-  intervalDays?: number;
+  intervalDays?: number | null;
   startDate?: string;
   editTaskId?: string;
 }

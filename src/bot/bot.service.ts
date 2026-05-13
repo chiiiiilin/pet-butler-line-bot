@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { webhook, messagingApi } from '@line/bot-sdk';
 import { StateService } from '../state/state.service';
-import { TaskService } from '../task/task.service';
+import { TaskService, TaskView } from '../task/task.service';
 import { LineService } from '../line/line.service';
 import { ConversationStateDocument } from '../state/conversation-state.schema';
 import { textMsg, formatDate, dateForPicker } from './lib/utils';
@@ -69,7 +69,8 @@ export class BotService {
           textMsg(`目前沒有任務。打 ${COMMAND.CREATE} 來建立第一個。`),
         ]);
       }
-      return reply(replyToken, [taskListCarousel(tasks)]);
+      const nameMap = await this.resolveNames(tasks, event.source);
+      return reply(replyToken, [taskListCarousel(tasks, nameMap)]);
     }
     if (trimmed === COMMAND.TODAY) {
       const tasks = await this.task.listDueByGroup(groupId);
@@ -150,9 +151,7 @@ export class BotService {
         const updated = await this.task.update(taskId, { name: text });
         await this.state.clear(userId, groupId);
         if (!updated) return reply(replyToken, [textMsg('任務不存在')]);
-        return reply(replyToken, [
-          textMsg(`✏️ 已改名為「${updated.name}」`),
-        ]);
+        return reply(replyToken, [textMsg(`✏️ 已改名為「${updated.name}」`)]);
       }
 
       case 'awaiting_edit_freq_custom': {
@@ -172,9 +171,7 @@ export class BotService {
         });
         await this.state.clear(userId, groupId);
         if (!updated) return reply(replyToken, [textMsg('任務不存在')]);
-        return reply(replyToken, [
-          textMsg(`🔁 已改頻率為每 ${days} 天`),
-        ]);
+        return reply(replyToken, [textMsg(`🔁 已改頻率為每 ${days} 天`)]);
       }
 
       case 'awaiting_frequency':
@@ -202,13 +199,15 @@ export class BotService {
     if (action === ACTION.COMPLETE) {
       const id = params.get('id');
       if (!id) return null;
-      const displayName = await this.line.getDisplayName(userId, event.source);
-      const task = await this.task.complete(id, displayName);
+      const task = await this.task.complete(id, userId);
       if (!task) return reply(replyToken, [textMsg('任務不存在')]);
+      const displayName = await this.line.getDisplayName(userId, event.source);
+      const tail =
+        task.status === 'done'
+          ? '📌 一次性任務已歸檔'
+          : `下次提醒：${formatDate(task.nextDueAt)}`;
       return reply(replyToken, [
-        textMsg(
-          `✅ 已完成「${task.name}」(by ${displayName})\n下次提醒：${formatDate(task.nextDueAt)}`,
-        ),
+        textMsg(`✅ 已完成「${task.name}」(by ${displayName})\n${tail}`),
       ]);
     }
 
@@ -237,7 +236,8 @@ export class BotService {
       if (!id) return null;
       const task = await this.task.findById(id);
       if (!task) return reply(replyToken, [textMsg('任務不存在')]);
-      return reply(replyToken, [taskDetailCard(task)]);
+      const nameMap = await this.resolveNames([task], event.source);
+      return reply(replyToken, [taskDetailCard(task, nameMap)]);
     }
 
     if (action === ACTION.EDIT_DATE) {
@@ -280,6 +280,12 @@ export class BotService {
         await this.state.setStep(userId, groupId, 'awaiting_custom_days', {});
         return reply(replyToken, [textMsg('請輸入幾天，例如 30：')]);
       }
+      if (value === 'oneoff') {
+        await this.state.setStep(userId, groupId, 'awaiting_start_date', {
+          intervalDays: null,
+        });
+        return reply(replyToken, [askStartDate()]);
+      }
       const intervalDays = parseInt(value ?? '', 10);
       if (isNaN(intervalDays)) return null;
       await this.state.setStep(userId, groupId, 'awaiting_start_date', {
@@ -288,10 +294,7 @@ export class BotService {
       return reply(replyToken, [askStartDate()]);
     }
 
-    if (
-      action === ACTION.START_DATE &&
-      state.step === 'awaiting_start_date'
-    ) {
+    if (action === ACTION.START_DATE && state.step === 'awaiting_start_date') {
       let dateStr: string | null = null;
       if (event.postback.params && 'date' in event.postback.params) {
         dateStr = event.postback.params.date ?? null;
@@ -321,20 +324,21 @@ export class BotService {
         await this.state.setStep(userId, groupId, 'awaiting_edit_freq_custom');
         return reply(replyToken, [textMsg('請輸入幾天，例如 30：')]);
       }
-      const intervalDays = parseInt(value ?? '', 10);
-      if (isNaN(intervalDays)) return null;
       const taskId = state.tempData.editTaskId;
       if (!taskId) {
         await this.state.clear(userId, groupId);
-        return reply(replyToken, [
-          textMsg(`狀態錯誤，請重新 ${COMMAND.EDIT}`),
-        ]);
+        return reply(replyToken, [textMsg(`狀態錯誤，請重新 ${COMMAND.EDIT}`)]);
       }
+      if (value === 'oneoff') {
+        await this.task.update(taskId, { intervalDays: null });
+        await this.state.clear(userId, groupId);
+        return reply(replyToken, [textMsg('🔁 已改頻率為不重複')]);
+      }
+      const intervalDays = parseInt(value ?? '', 10);
+      if (isNaN(intervalDays)) return null;
       await this.task.update(taskId, { intervalDays });
       await this.state.clear(userId, groupId);
-      return reply(replyToken, [
-        textMsg(`🔁 已改頻率為每 ${intervalDays} 天`),
-      ]);
+      return reply(replyToken, [textMsg(`🔁 已改頻率為每 ${intervalDays} 天`)]);
     }
 
     if (action === ACTION.CANCEL) {
@@ -344,7 +348,7 @@ export class BotService {
 
     if (action === ACTION.CONFIRM && state.step === 'awaiting_confirm') {
       const { name, intervalDays, startDate } = state.tempData;
-      if (!name || !intervalDays || !startDate) {
+      if (!name || intervalDays === undefined || !startDate) {
         await this.state.clear(userId, groupId);
         return reply(replyToken, [
           textMsg(`資料不完整，請重新 ${COMMAND.CREATE}`),
@@ -357,9 +361,11 @@ export class BotService {
         startDate,
       });
       await this.state.clear(userId, groupId);
+      const freqText =
+        intervalDays == null ? '不重複' : `每 ${intervalDays} 天`;
       return reply(replyToken, [
         textMsg(
-          `✅ 任務已建立\n名稱：${name}\n頻率：每 ${intervalDays} 天\n首次提醒：${formatDate(created.nextDueAt)}`,
+          `✅ 任務已建立\n名稱：${name}\n頻率：${freqText}\n首次提醒：${formatDate(created.nextDueAt)}`,
         ),
       ]);
     }
@@ -381,6 +387,26 @@ export class BotService {
     if (source.type === 'room') return source.roomId;
     if (source.type === 'user') return `dm:${source.userId}`;
     return 'unknown';
+  }
+
+  private async resolveNames(
+    tasks: TaskView[],
+    source: webhook.Source,
+  ): Promise<Map<string, string>> {
+    const userIds = [
+      ...new Set(
+        tasks.flatMap((t) =>
+          t.lastCompletion ? [t.lastCompletion.userId] : [],
+        ),
+      ),
+    ];
+    const map = new Map<string, string>();
+    await Promise.all(
+      userIds.map(async (uid) => {
+        map.set(uid, await this.line.getDisplayName(uid, source));
+      }),
+    );
+    return map;
   }
 }
 

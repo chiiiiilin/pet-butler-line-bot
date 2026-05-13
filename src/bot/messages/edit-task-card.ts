@@ -1,11 +1,9 @@
 import { messagingApi } from '@line/bot-sdk';
-import { TaskDocument } from '../../task/task.schema';
+import { TaskView } from '../../task/task.service';
 import { dateForPicker, formatDate } from '../lib/utils';
 import { ACTION } from '../lib/actions';
 
-export function editTaskCarousel(
-  tasks: TaskDocument[],
-): messagingApi.FlexMessage {
+export function editTaskCarousel(tasks: TaskView[]): messagingApi.FlexMessage {
   return {
     type: 'flex',
     altText: '選擇要編輯的任務',
@@ -16,13 +14,17 @@ export function editTaskCarousel(
   };
 }
 
-function editTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
-  const id = String(task._id);
+function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
+  const id = task._id;
   const today = dateForPicker(new Date());
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const isOverdue = task.nextDueAt < startOfToday;
+  const startOfDueDate = new Date(task.nextDueAt);
+  startOfDueDate.setHours(0, 0, 0, 0);
+  const isOverdue = startOfDueDate < startOfToday;
   const initial = isOverdue ? today : dateForPicker(task.nextDueAt);
+  const freqText =
+    task.intervalDays == null ? '不重複' : `每 ${task.intervalDays} 天`;
 
   return {
     type: 'bubble',
@@ -53,7 +55,7 @@ function editTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
             },
             {
               type: 'text',
-              text: `每 ${task.intervalDays} 天`,
+              text: freqText,
               size: 'sm',
               flex: 5,
             },

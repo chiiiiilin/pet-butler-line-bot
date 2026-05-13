@@ -1,9 +1,9 @@
 import { messagingApi } from '@line/bot-sdk';
-import { TaskDocument } from '../../task/task.schema';
+import { TaskView } from '../../task/task.service';
 import { ACTION } from '../lib/actions';
 
 export function deleteTaskCarousel(
-  tasks: TaskDocument[],
+  tasks: TaskView[],
 ): messagingApi.FlexMessage {
   return {
     type: 'flex',
@@ -15,8 +15,10 @@ export function deleteTaskCarousel(
   };
 }
 
-function deleteTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
-  const id = String(task._id);
+function deleteTaskBubble(task: TaskView): messagingApi.FlexBubble {
+  const id = task._id;
+  const freqText =
+    task.intervalDays == null ? '不重複' : `每 ${task.intervalDays} 天`;
   return {
     type: 'bubble',
     size: 'kilo',
@@ -46,7 +48,7 @@ function deleteTaskBubble(task: TaskDocument): messagingApi.FlexBubble {
             },
             {
               type: 'text',
-              text: `每 ${task.intervalDays} 天`,
+              text: freqText,
               size: 'sm',
               flex: 5,
             },

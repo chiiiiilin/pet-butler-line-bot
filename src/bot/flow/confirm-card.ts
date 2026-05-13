@@ -50,7 +50,10 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
               },
               {
                 type: 'text',
-                text: `每 ${tempData.intervalDays} 天`,
+                text:
+                  tempData.intervalDays == null
+                    ? '不重複'
+                    : `每 ${tempData.intervalDays} 天`,
                 size: 'sm',
                 flex: 5,
               },
