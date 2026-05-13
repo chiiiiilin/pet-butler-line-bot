@@ -21,10 +21,7 @@ export class LineService {
     await this.client.replyMessage({ replyToken, messages });
   }
 
-  async push(
-    to: string,
-    messages: messagingApi.Message[],
-  ): Promise<void> {
+  async push(to: string, messages: messagingApi.Message[]): Promise<void> {
     await this.client.pushMessage({ to, messages });
   }
 

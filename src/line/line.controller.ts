@@ -40,7 +40,8 @@ export class LineController {
       throw new UnauthorizedException('Invalid LINE signature');
     }
 
-    const events: webhook.Event[] = JSON.parse(rawBody).events ?? [];
+    const parsed = JSON.parse(rawBody) as { events?: webhook.Event[] };
+    const events = parsed.events ?? [];
     this.logger.log(`Received ${events.length} event(s)`);
 
     for (const event of events) {
