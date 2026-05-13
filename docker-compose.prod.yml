@@ -3,6 +3,7 @@ services:
     image: pet-butler-line-bot:latest
     container_name: pet-butler-app
     restart: unless-stopped
+    stop_grace_period: 30s
     env_file: .env
     depends_on:
       - mongo

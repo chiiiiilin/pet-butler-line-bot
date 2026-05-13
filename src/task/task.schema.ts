@@ -23,3 +23,5 @@ export class Task {
 
 export type TaskDocument = HydratedDocument<Task>;
 export const TaskSchema = SchemaFactory.createForClass(Task);
+
+TaskSchema.index({ groupId: 1, status: 1, nextDueAt: 1 });
