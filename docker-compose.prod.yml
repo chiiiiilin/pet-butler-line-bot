@@ -1,0 +1,43 @@
+services:
+  app:
+    image: pet-butler-line-bot:latest
+    container_name: pet-butler-app
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - mongo
+    networks:
+      - pet-butler-net
+
+  mongo:
+    image: mongo:7
+    container_name: pet-butler-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - pet-butler-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: pet-butler-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    networks:
+      - pet-butler-net
+
+volumes:
+  mongo-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  pet-butler-net:
