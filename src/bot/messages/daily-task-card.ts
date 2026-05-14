@@ -1,6 +1,7 @@
 import { messagingApi } from '@line/bot-sdk';
 import { TaskView } from '../../task/task.service';
 import { ACTION } from '../lib/actions';
+import { TEXT } from './text';
 
 export type CardContext = 'morning' | 'evening' | 'today';
 
@@ -74,7 +75,7 @@ function taskRow(task: TaskView, startOfToday: Date): messagingApi.FlexBox {
   if (isOverdue) {
     contents.push({
       type: 'text',
-      text: `🔴 ${daysOverdue} 天`,
+      text: TEXT.overdue.short(daysOverdue),
       size: 'sm',
       color: '#d33333',
       flex: 0,

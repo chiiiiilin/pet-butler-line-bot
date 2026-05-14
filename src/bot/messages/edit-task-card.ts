@@ -2,11 +2,12 @@ import { messagingApi } from '@line/bot-sdk';
 import { TaskView } from '../../task/task.service';
 import { dateForPicker, formatDate } from '../lib/utils';
 import { ACTION } from '../lib/actions';
+import { TEXT } from './text';
 
 export function editTaskCarousel(tasks: TaskView[]): messagingApi.FlexMessage {
   return {
     type: 'flex',
-    altText: '選擇要編輯的任務',
+    altText: TEXT.alt.editSelection,
     contents: {
       type: 'carousel',
       contents: tasks.slice(0, 12).map(editTaskBubble),
@@ -24,7 +25,9 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
   const isOverdue = startOfDueDate < startOfToday;
   const initial = isOverdue ? today : dateForPicker(task.nextDueAt);
   const freqText =
-    task.intervalDays == null ? '不重複' : `每 ${task.intervalDays} 天`;
+    task.intervalDays == null
+      ? TEXT.freq.oneoff
+      : TEXT.freq.everyDays(task.intervalDays);
 
   return {
     type: 'bubble',
@@ -48,7 +51,7 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
           contents: [
             {
               type: 'text',
-              text: '頻率',
+              text: TEXT.labels.frequency,
               size: 'sm',
               color: '#888888',
               flex: 2,
@@ -68,7 +71,7 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
           contents: [
             {
               type: 'text',
-              text: '下次',
+              text: TEXT.labels.nextDue,
               size: 'sm',
               color: '#888888',
               flex: 2,
@@ -94,9 +97,9 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
           height: 'sm',
           action: {
             type: 'postback',
-            label: '✏️ 改名稱',
+            label: TEXT.buttons.editName,
             data: `action=${ACTION.EDIT_NAME}&id=${id}`,
-            displayText: '改名稱',
+            displayText: TEXT.buttons.editNameDisplay,
           },
         },
         {
@@ -105,9 +108,9 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
           height: 'sm',
           action: {
             type: 'postback',
-            label: '🔁 改頻率',
+            label: TEXT.buttons.editFreq,
             data: `action=${ACTION.EDIT_FREQ}&id=${id}`,
-            displayText: '改頻率',
+            displayText: TEXT.buttons.editFreqDisplay,
           },
         },
         {
@@ -116,7 +119,7 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
           height: 'sm',
           action: {
             type: 'datetimepicker',
-            label: '📅 改下次日期',
+            label: TEXT.buttons.editDate,
             data: `action=${ACTION.EDIT_DATE}&id=${id}`,
             mode: 'date',
             initial,

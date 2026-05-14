@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { TaskService } from '../task/task.service';
 import { LineService } from '../line/line.service';
 import { dailyTaskCard } from '../bot/messages/daily-task-card';
+import { TEXT } from '../bot/messages/text';
 
 export type ReminderTime = 'morning' | 'evening';
 
@@ -37,8 +38,8 @@ export class ReminderService {
         if (tasks.length === 0) continue;
         const intro =
           time === 'morning'
-            ? `🐱 早安！今天 ${tasks.length} 個任務`
-            : `🌙 晚安！還有 ${tasks.length} 個任務沒完成`;
+            ? TEXT.reminder.morningIntro(tasks.length)
+            : TEXT.reminder.eveningIntro(tasks.length);
         const dest = groupId.startsWith('dm:') ? groupId.slice(3) : groupId;
         await this.line.push(dest, [dailyTaskCard(tasks, intro, time)]);
         groupsNotified++;

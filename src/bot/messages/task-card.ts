@@ -2,6 +2,7 @@ import { messagingApi } from '@line/bot-sdk';
 import { TaskView } from '../../task/task.service';
 import { dateForPicker, formatDate, formatDateTime } from '../lib/utils';
 import { ACTION } from '../lib/actions';
+import { TEXT } from './text';
 
 export function taskListCarousel(
   tasks: TaskView[],
@@ -9,7 +10,7 @@ export function taskListCarousel(
 ): messagingApi.FlexMessage {
   return {
     type: 'flex',
-    altText: '任務列表',
+    altText: TEXT.alt.taskList,
     contents: {
       type: 'carousel',
       contents: tasks.slice(0, 12).map((t) => taskBubble(t, nameMap)),
@@ -61,7 +62,7 @@ function taskBubble(
   if (isOverdue) {
     bodyContents.push({
       type: 'text',
-      text: `🔴 逾期 ${daysOverdue} 天`,
+      text: TEXT.overdue.long(daysOverdue),
       size: 'sm',
       color: '#d33333',
       margin: 'sm',
@@ -69,7 +70,9 @@ function taskBubble(
   }
 
   const freqText =
-    task.intervalDays == null ? '不重複' : `每 ${task.intervalDays} 天`;
+    task.intervalDays == null
+      ? TEXT.freq.oneoff
+      : TEXT.freq.everyDays(task.intervalDays);
 
   bodyContents.push(
     { type: 'separator', margin: 'md' },
@@ -78,7 +81,13 @@ function taskBubble(
       layout: 'baseline',
       margin: 'md',
       contents: [
-        { type: 'text', text: '頻率', size: 'sm', color: '#888888', flex: 2 },
+        {
+          type: 'text',
+          text: TEXT.labels.frequency,
+          size: 'sm',
+          color: '#888888',
+          flex: 2,
+        },
         {
           type: 'text',
           text: freqText,
@@ -92,7 +101,13 @@ function taskBubble(
       layout: 'baseline',
       margin: 'sm',
       contents: [
-        { type: 'text', text: '下次', size: 'sm', color: '#888888', flex: 2 },
+        {
+          type: 'text',
+          text: TEXT.labels.nextDue,
+          size: 'sm',
+          color: '#888888',
+          flex: 2,
+        },
         {
           type: 'text',
           text: formatDate(task.nextDueAt),
@@ -114,7 +129,7 @@ function taskBubble(
       contents: [
         {
           type: 'text',
-          text: '上次完成',
+          text: TEXT.labels.lastDone,
           size: 'sm',
           color: '#888888',
           flex: 2,
@@ -149,9 +164,9 @@ function taskBubble(
           height: 'md',
           action: {
             type: 'postback',
-            label: '完成',
+            label: TEXT.buttons.complete,
             data: `action=${ACTION.COMPLETE}&id=${id}`,
-            displayText: '完成',
+            displayText: TEXT.buttons.complete,
           },
         },
         {
@@ -160,7 +175,7 @@ function taskBubble(
           height: 'sm',
           action: {
             type: 'datetimepicker',
-            label: '忽略',
+            label: TEXT.buttons.snooze,
             data: `action=${ACTION.SNOOZE}&id=${id}`,
             mode: 'date',
             initial,

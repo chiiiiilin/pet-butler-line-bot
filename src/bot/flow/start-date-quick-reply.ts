@@ -1,6 +1,7 @@
 import { messagingApi } from '@line/bot-sdk';
 import { ACTION } from '../lib/actions';
 import { dateForPicker } from '../lib/utils';
+import { TEXT } from '../messages/text';
 
 export function askStartDate(): messagingApi.TextMessage {
   const today = new Date();
@@ -9,32 +10,32 @@ export function askStartDate(): messagingApi.TextMessage {
 
   return {
     type: 'text',
-    text: '從哪一天開始？',
+    text: TEXT.startDateQuickReply.prompt,
     quickReply: {
       items: [
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '今天',
+            label: TEXT.startDateQuickReply.today,
             data: `action=${ACTION.START_DATE}&value=today`,
-            displayText: '今天',
+            displayText: TEXT.startDateQuickReply.today,
           },
         },
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '明天',
+            label: TEXT.startDateQuickReply.tomorrow,
             data: `action=${ACTION.START_DATE}&value=tomorrow`,
-            displayText: '明天',
+            displayText: TEXT.startDateQuickReply.tomorrow,
           },
         },
         {
           type: 'action',
           action: {
             type: 'datetimepicker',
-            label: '📅 自訂日期',
+            label: TEXT.startDateQuickReply.custom,
             data: `action=${ACTION.START_DATE}`,
             mode: 'date',
             initial: dateForPicker(tomorrow),

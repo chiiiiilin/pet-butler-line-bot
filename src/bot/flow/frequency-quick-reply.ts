@@ -1,64 +1,65 @@
 import { messagingApi } from '@line/bot-sdk';
 import { ACTION } from '../lib/actions';
+import { TEXT } from '../messages/text';
 
 export function askFrequency(): messagingApi.TextMessage {
   return {
     type: 'text',
-    text: '請選擇頻率：',
+    text: TEXT.freqQuickReply.prompt,
     quickReply: {
       items: [
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '每天',
+            label: TEXT.freqQuickReply.daily,
             data: `action=${ACTION.FREQ}&value=1`,
-            displayText: '每天',
+            displayText: TEXT.freqQuickReply.daily,
           },
         },
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '每週',
+            label: TEXT.freqQuickReply.weekly,
             data: `action=${ACTION.FREQ}&value=7`,
-            displayText: '每週',
+            displayText: TEXT.freqQuickReply.weekly,
           },
         },
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '每月',
+            label: TEXT.freqQuickReply.monthly,
             data: `action=${ACTION.FREQ}&value=30`,
-            displayText: '每月',
+            displayText: TEXT.freqQuickReply.monthly,
           },
         },
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '每季',
+            label: TEXT.freqQuickReply.quarterly,
             data: `action=${ACTION.FREQ}&value=90`,
-            displayText: '每季',
+            displayText: TEXT.freqQuickReply.quarterly,
           },
         },
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '自訂天數',
+            label: TEXT.freqQuickReply.custom,
             data: `action=${ACTION.FREQ}&value=custom`,
-            displayText: '自訂天數',
+            displayText: TEXT.freqQuickReply.custom,
           },
         },
         {
           type: 'action',
           action: {
             type: 'postback',
-            label: '不重複',
+            label: TEXT.freqQuickReply.oneoff,
             data: `action=${ACTION.FREQ}&value=oneoff`,
-            displayText: '不重複',
+            displayText: TEXT.freqQuickReply.oneoff,
           },
         },
       ],

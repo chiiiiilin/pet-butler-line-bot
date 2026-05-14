@@ -16,6 +16,7 @@ import { editTaskCarousel } from './messages/edit-task-card';
 import { askFrequency } from './flow/frequency-quick-reply';
 import { askStartDate } from './flow/start-date-quick-reply';
 import { commandsHelp } from './messages/help';
+import { TEXT } from './messages/text';
 import { COMMAND } from './lib/commands';
 import { ACTION } from './lib/actions';
 
@@ -59,18 +60,16 @@ export class BotService {
 
     if (trimmed === COMMAND.CANCEL) {
       await this.state.clear(userId, groupId);
-      return reply(replyToken, [textMsg('已取消')]);
+      return reply(replyToken, [textMsg(TEXT.common.cancelled)]);
     }
     if (trimmed === COMMAND.CREATE) {
       await this.state.setStep(userId, groupId, STEP.AWAITING_NAME, {});
-      return reply(replyToken, [textMsg('請輸入任務名稱：')]);
+      return reply(replyToken, [textMsg(TEXT.create.askName)]);
     }
     if (trimmed === COMMAND.LIST) {
       const tasks = await this.task.listByGroup(groupId);
       if (tasks.length === 0) {
-        return reply(replyToken, [
-          textMsg(`目前沒有任務。打 ${COMMAND.CREATE} 來建立第一個。`),
-        ]);
+        return reply(replyToken, [textMsg(TEXT.list.empty)]);
       }
       const nameMap = await this.resolveNames(tasks, event.source);
       return reply(replyToken, [taskListCarousel(tasks, nameMap)]);
@@ -78,23 +77,23 @@ export class BotService {
     if (trimmed === COMMAND.TODAY) {
       const tasks = await this.task.listDueByGroup(groupId);
       if (tasks.length === 0) {
-        return reply(replyToken, [textMsg('今天沒有待辦 ✨')]);
+        return reply(replyToken, [textMsg(TEXT.today.empty)]);
       }
       return reply(replyToken, [
-        dailyTaskCard(tasks, `🐱 今天 ${tasks.length} 個任務`, 'today'),
+        dailyTaskCard(tasks, TEXT.today.intro(tasks.length), 'today'),
       ]);
     }
     if (trimmed === COMMAND.DELETE) {
       const tasks = await this.task.listByGroup(groupId);
       if (tasks.length === 0) {
-        return reply(replyToken, [textMsg('目前沒有任務可刪除')]);
+        return reply(replyToken, [textMsg(TEXT.list.emptyToDelete)]);
       }
       return reply(replyToken, [deleteTaskCarousel(tasks)]);
     }
     if (trimmed === COMMAND.EDIT) {
       const tasks = await this.task.listByGroup(groupId);
       if (tasks.length === 0) {
-        return reply(replyToken, [textMsg('目前沒有任務可編輯')]);
+        return reply(replyToken, [textMsg(TEXT.list.emptyToEdit)]);
       }
       return reply(replyToken, [editTaskCarousel(tasks)]);
     }
@@ -108,7 +107,7 @@ export class BotService {
     }
 
     if (event.source.type === 'user') {
-      return reply(replyToken, [textMsg(`收到: ${trimmed}`)]);
+      return reply(replyToken, [textMsg(TEXT.common.echo(trimmed))]);
     }
     return null;
   }
@@ -123,7 +122,7 @@ export class BotService {
     switch (state.step) {
       case STEP.AWAITING_NAME: {
         if (!text) {
-          return reply(replyToken, [textMsg('請輸入任務名稱：')]);
+          return reply(replyToken, [textMsg(TEXT.create.askName)]);
         }
         await this.state.setStep(userId, groupId, STEP.AWAITING_FREQUENCY, {
           name: text,
@@ -134,7 +133,7 @@ export class BotService {
       case STEP.AWAITING_CUSTOM_DAYS: {
         const days = parseInt(text, 10);
         if (isNaN(days) || days < 1) {
-          return reply(replyToken, [textMsg('請輸入正整數天數，例如 30')]);
+          return reply(replyToken, [textMsg(TEXT.create.invalidDays)]);
         }
         await this.state.setStep(userId, groupId, STEP.AWAITING_START_DATE, {
           intervalDays: days,
@@ -143,47 +142,45 @@ export class BotService {
       }
 
       case STEP.AWAITING_EDIT_NAME: {
-        if (!text) return reply(replyToken, [textMsg('請輸入新名稱：')]);
+        if (!text) return reply(replyToken, [textMsg(TEXT.edit.askNewName)]);
         const taskId = state.tempData.editTaskId;
         if (!taskId) {
           await this.state.clear(userId, groupId);
-          return reply(replyToken, [
-            textMsg(`狀態錯誤，請重新 ${COMMAND.EDIT}`),
-          ]);
+          return reply(replyToken, [textMsg(TEXT.common.stateErrorEdit)]);
         }
         const updated = await this.task.update(taskId, { name: text });
         await this.state.clear(userId, groupId);
-        if (!updated) return reply(replyToken, [textMsg('任務不存在')]);
-        return reply(replyToken, [textMsg(`✏️ 已改名為「${updated.name}」`)]);
+        if (!updated)
+          return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+        return reply(replyToken, [
+          textMsg(TEXT.edit.nameUpdated(updated.name)),
+        ]);
       }
 
       case STEP.AWAITING_EDIT_FREQ_CUSTOM: {
         const days = parseInt(text, 10);
         if (isNaN(days) || days < 1) {
-          return reply(replyToken, [textMsg('請輸入正整數天數，例如 30')]);
+          return reply(replyToken, [textMsg(TEXT.create.invalidDays)]);
         }
         const taskId = state.tempData.editTaskId;
         if (!taskId) {
           await this.state.clear(userId, groupId);
-          return reply(replyToken, [
-            textMsg(`狀態錯誤，請重新 ${COMMAND.EDIT}`),
-          ]);
+          return reply(replyToken, [textMsg(TEXT.common.stateErrorEdit)]);
         }
         const updated = await this.task.update(taskId, {
           intervalDays: days,
         });
         await this.state.clear(userId, groupId);
-        if (!updated) return reply(replyToken, [textMsg('任務不存在')]);
-        return reply(replyToken, [textMsg(`🔁 已改頻率為每 ${days} 天`)]);
+        if (!updated)
+          return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+        return reply(replyToken, [textMsg(TEXT.edit.freqUpdatedDays(days))]);
       }
 
       case STEP.AWAITING_FREQUENCY:
       case STEP.AWAITING_START_DATE:
       case STEP.AWAITING_EDIT_FREQ:
       case STEP.AWAITING_CONFIRM:
-        return reply(replyToken, [
-          textMsg(`請點上方按鈕，或輸入 ${COMMAND.CANCEL} 退出`),
-        ]);
+        return reply(replyToken, [textMsg(TEXT.common.guideToButtons)]);
     }
   }
 
@@ -203,14 +200,14 @@ export class BotService {
       const id = params.get('id');
       if (!id) return null;
       const task = await this.task.complete(id, userId);
-      if (!task) return reply(replyToken, [textMsg('任務不存在')]);
+      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
       const displayName = await this.line.getDisplayName(userId, event.source);
       const tail =
         task.status === 'done'
-          ? '📌 一次性任務已歸檔'
-          : `下次提醒：${formatDate(task.nextDueAt)}`;
+          ? TEXT.task.archived
+          : TEXT.task.nextReminder(formatDate(task.nextDueAt));
       return reply(replyToken, [
-        textMsg(`✅ 已完成「${task.name}」(by ${displayName})\n${tail}`),
+        textMsg(TEXT.task.completed(task.name, displayName, tail)),
       ]);
     }
 
@@ -219,11 +216,9 @@ export class BotService {
       const dateStr = event.postback.params?.date;
       if (!id || !dateStr) return null;
       const task = await this.task.snooze(id, dateStr);
-      if (!task) return reply(replyToken, [textMsg('任務不存在')]);
+      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
       return reply(replyToken, [
-        textMsg(
-          `⏭ 已忽略「${task.name}」\n下次提醒：${formatDate(task.nextDueAt)}`,
-        ),
+        textMsg(TEXT.task.snoozed(task.name, formatDate(task.nextDueAt))),
       ]);
     }
 
@@ -231,14 +226,16 @@ export class BotService {
       const id = params.get('id');
       if (!id) return null;
       const ok = await this.task.remove(id);
-      return reply(replyToken, [textMsg(ok ? '已刪除任務' : '任務不存在')]);
+      return reply(replyToken, [
+        textMsg(ok ? TEXT.task.deleted : TEXT.common.taskNotFound),
+      ]);
     }
 
     if (action === ACTION.SHOW) {
       const id = params.get('id');
       if (!id) return null;
       const task = await this.task.findById(id);
-      if (!task) return reply(replyToken, [textMsg('任務不存在')]);
+      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
       const nameMap = await this.resolveNames([task], event.source);
       return reply(replyToken, [taskDetailCard(task, nameMap)]);
     }
@@ -248,11 +245,9 @@ export class BotService {
       const dateStr = event.postback.params?.date;
       if (!id || !dateStr) return null;
       const task = await this.task.snooze(id, dateStr);
-      if (!task) return reply(replyToken, [textMsg('任務不存在')]);
+      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
       return reply(replyToken, [
-        textMsg(
-          `📅 已改下次日期「${task.name}」\n下次提醒：${formatDate(task.nextDueAt)}`,
-        ),
+        textMsg(TEXT.edit.dateUpdated(task.name, formatDate(task.nextDueAt))),
       ]);
     }
 
@@ -262,7 +257,7 @@ export class BotService {
       await this.state.setStep(userId, groupId, STEP.AWAITING_EDIT_NAME, {
         editTaskId: id,
       });
-      return reply(replyToken, [textMsg('請輸入新名稱：')]);
+      return reply(replyToken, [textMsg(TEXT.edit.askNewName)]);
     }
 
     if (action === ACTION.EDIT_FREQ) {
@@ -286,7 +281,7 @@ export class BotService {
           STEP.AWAITING_CUSTOM_DAYS,
           {},
         );
-        return reply(replyToken, [textMsg('請輸入幾天，例如 30：')]);
+        return reply(replyToken, [textMsg(TEXT.create.askCustomDays)]);
       }
       if (value === 'oneoff') {
         await this.state.setStep(userId, groupId, STEP.AWAITING_START_DATE, {
@@ -337,37 +332,37 @@ export class BotService {
           groupId,
           STEP.AWAITING_EDIT_FREQ_CUSTOM,
         );
-        return reply(replyToken, [textMsg('請輸入幾天，例如 30：')]);
+        return reply(replyToken, [textMsg(TEXT.create.askCustomDays)]);
       }
       const taskId = state.tempData.editTaskId;
       if (!taskId) {
         await this.state.clear(userId, groupId);
-        return reply(replyToken, [textMsg(`狀態錯誤，請重新 ${COMMAND.EDIT}`)]);
+        return reply(replyToken, [textMsg(TEXT.common.stateErrorEdit)]);
       }
       if (value === 'oneoff') {
         await this.task.update(taskId, { intervalDays: null });
         await this.state.clear(userId, groupId);
-        return reply(replyToken, [textMsg('🔁 已改頻率為不重複')]);
+        return reply(replyToken, [textMsg(TEXT.edit.freqUpdatedOneoff)]);
       }
       const intervalDays = parseInt(value ?? '', 10);
       if (isNaN(intervalDays)) return null;
       await this.task.update(taskId, { intervalDays });
       await this.state.clear(userId, groupId);
-      return reply(replyToken, [textMsg(`🔁 已改頻率為每 ${intervalDays} 天`)]);
+      return reply(replyToken, [
+        textMsg(TEXT.edit.freqUpdatedDays(intervalDays)),
+      ]);
     }
 
     if (action === ACTION.CANCEL) {
       await this.state.clear(userId, groupId);
-      return reply(replyToken, [textMsg('已取消')]);
+      return reply(replyToken, [textMsg(TEXT.common.cancelled)]);
     }
 
     if (action === ACTION.CONFIRM && state.step === STEP.AWAITING_CONFIRM) {
       const { name, intervalDays, startDate } = state.tempData;
       if (!name || intervalDays === undefined || !startDate) {
         await this.state.clear(userId, groupId);
-        return reply(replyToken, [
-          textMsg(`資料不完整，請重新 ${COMMAND.CREATE}`),
-        ]);
+        return reply(replyToken, [textMsg(TEXT.create.incompleteData)]);
       }
       const created = await this.task.create({
         groupId,
@@ -377,10 +372,12 @@ export class BotService {
       });
       await this.state.clear(userId, groupId);
       const freqText =
-        intervalDays == null ? '不重複' : `每 ${intervalDays} 天`;
+        intervalDays == null
+          ? TEXT.freq.oneoff
+          : TEXT.freq.everyDays(intervalDays);
       return reply(replyToken, [
         textMsg(
-          `✅ 任務已建立\n名稱：${name}\n頻率：${freqText}\n首次提醒：${formatDate(created.nextDueAt)}`,
+          TEXT.create.created(name, freqText, formatDate(created.nextDueAt)),
         ),
       ]);
     }
@@ -390,11 +387,7 @@ export class BotService {
 
   private handleJoin(event: webhook.JoinEvent): ReplyIntent | null {
     if (!event.replyToken) return null;
-    return reply(event.replyToken, [
-      textMsg(
-        `哈囉 🐾 我是貓貓管家!\n打 ${COMMAND.CREATE} 開始建立新任務，打 ${COMMAND.HELP} 看全部指令。`,
-      ),
-    ]);
+    return reply(event.replyToken, [textMsg(TEXT.common.greeting)]);
   }
 
   private getGroupId(source: webhook.Source): string {

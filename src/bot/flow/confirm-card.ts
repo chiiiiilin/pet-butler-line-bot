@@ -2,18 +2,24 @@ import { messagingApi } from '@line/bot-sdk';
 import { TempData } from '../../state/conversation-state.schema';
 import { ACTION } from '../lib/actions';
 import { formatDateOnly } from '../lib/utils';
+import { TEXT } from '../messages/text';
 
 export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
   return {
     type: 'flex',
-    altText: '確認建立任務',
+    altText: TEXT.alt.confirmCreate,
     contents: {
       type: 'bubble',
       body: {
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: '確認建立任務', weight: 'bold', size: 'lg' },
+          {
+            type: 'text',
+            text: TEXT.confirmCard.title,
+            weight: 'bold',
+            size: 'lg',
+          },
           { type: 'separator', margin: 'md' },
           {
             type: 'box',
@@ -22,7 +28,7 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: '任務',
+                text: TEXT.labels.task,
                 size: 'sm',
                 color: '#888888',
                 flex: 2,
@@ -43,7 +49,7 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: '頻率',
+                text: TEXT.labels.frequency,
                 size: 'sm',
                 color: '#888888',
                 flex: 2,
@@ -52,8 +58,8 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
                 type: 'text',
                 text:
                   tempData.intervalDays == null
-                    ? '不重複'
-                    : `每 ${tempData.intervalDays} 天`,
+                    ? TEXT.freq.oneoff
+                    : TEXT.freq.everyDays(tempData.intervalDays),
                 size: 'sm',
                 flex: 5,
               },
@@ -66,7 +72,7 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
             contents: [
               {
                 type: 'text',
-                text: '開始',
+                text: TEXT.labels.startDate,
                 size: 'sm',
                 color: '#888888',
                 flex: 2,
@@ -93,9 +99,9 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
             style: 'secondary',
             action: {
               type: 'postback',
-              label: '取消',
+              label: TEXT.buttons.cancel,
               data: `action=${ACTION.CANCEL}`,
-              displayText: '取消',
+              displayText: TEXT.buttons.cancel,
             },
           },
           {
@@ -103,9 +109,9 @@ export function confirmCard(tempData: TempData): messagingApi.FlexMessage {
             style: 'primary',
             action: {
               type: 'postback',
-              label: '確認建立',
+              label: TEXT.buttons.confirmCreate,
               data: `action=${ACTION.CONFIRM}`,
-              displayText: '確認建立',
+              displayText: TEXT.buttons.confirmCreate,
             },
           },
         ],

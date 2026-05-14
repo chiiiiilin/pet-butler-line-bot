@@ -1,13 +1,14 @@
 import { messagingApi } from '@line/bot-sdk';
 import { TaskView } from '../../task/task.service';
 import { ACTION } from '../lib/actions';
+import { TEXT } from './text';
 
 export function deleteTaskCarousel(
   tasks: TaskView[],
 ): messagingApi.FlexMessage {
   return {
     type: 'flex',
-    altText: '選擇要刪除的任務',
+    altText: TEXT.alt.deleteSelection,
     contents: {
       type: 'carousel',
       contents: tasks.slice(0, 12).map(deleteTaskBubble),
@@ -18,7 +19,9 @@ export function deleteTaskCarousel(
 function deleteTaskBubble(task: TaskView): messagingApi.FlexBubble {
   const id = task._id;
   const freqText =
-    task.intervalDays == null ? '不重複' : `每 ${task.intervalDays} 天`;
+    task.intervalDays == null
+      ? TEXT.freq.oneoff
+      : TEXT.freq.everyDays(task.intervalDays);
   return {
     type: 'bubble',
     size: 'kilo',
@@ -41,7 +44,7 @@ function deleteTaskBubble(task: TaskView): messagingApi.FlexBubble {
           contents: [
             {
               type: 'text',
-              text: '頻率',
+              text: TEXT.labels.frequency,
               size: 'sm',
               color: '#888888',
               flex: 2,
@@ -67,9 +70,9 @@ function deleteTaskBubble(task: TaskView): messagingApi.FlexBubble {
           height: 'sm',
           action: {
             type: 'postback',
-            label: '刪除這個',
+            label: TEXT.buttons.delete,
             data: `action=${ACTION.DELETE}&id=${id}`,
-            displayText: '刪除這個任務',
+            displayText: TEXT.buttons.deleteDisplay,
           },
         },
       ],
