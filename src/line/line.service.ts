@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { messagingApi, webhook } from '@line/bot-sdk';
+import { messagingApi, webhook, HTTPFetchError } from '@line/bot-sdk';
+import { QuotaService } from './quota.service';
 
 @Injectable()
 export class LineService {
   private readonly logger = new Logger(LineService.name);
   private readonly client: messagingApi.MessagingApiClient;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly quota: QuotaService,
+  ) {
     this.client = new messagingApi.MessagingApiClient({
       channelAccessToken:
         this.config.get<string>('LINE_CHANNEL_ACCESS_TOKEN') ?? '',
@@ -22,7 +26,14 @@ export class LineService {
   }
 
   async push(to: string, messages: messagingApi.Message[]): Promise<void> {
-    await this.client.pushMessage({ to, messages });
+    try {
+      await this.client.pushMessage({ to, messages });
+    } catch (e) {
+      if (e instanceof HTTPFetchError && e.status === 429) {
+        this.quota.markExceeded();
+      }
+      throw e;
+    }
   }
 
   async getDisplayName(

@@ -3,6 +3,7 @@ import { webhook, messagingApi } from '@line/bot-sdk';
 import { StateService } from '../state/state.service';
 import { TaskService, TaskView } from '../task/task.service';
 import { LineService } from '../line/line.service';
+import { QuotaService } from '../line/quota.service';
 import {
   ConversationStateDocument,
   STEP,
@@ -31,9 +32,18 @@ export class BotService {
     private readonly state: StateService,
     private readonly task: TaskService,
     private readonly line: LineService,
+    private readonly quota: QuotaService,
   ) {}
 
   async handleEvent(event: webhook.Event): Promise<ReplyIntent | null> {
+    const intent = await this.route(event);
+    if (intent && this.quota.getStatus().exceeded) {
+      intent.messages = [...intent.messages, textMsg(TEXT.quota.exceeded)];
+    }
+    return intent;
+  }
+
+  private async route(event: webhook.Event): Promise<ReplyIntent | null> {
     if (event.type === 'message' && event.message.type === 'text') {
       return this.handleText(event, event.message.text);
     }

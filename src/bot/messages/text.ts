@@ -54,6 +54,12 @@ export const TEXT = {
     eveningIntro: (count: number) => `🐾 晚間提醒:\n還有 ${count} 個任務沒完成`,
   },
 
+  quota: {
+    low: (remaining: number) =>
+      `⚠️ 本月推播額度剩 ${remaining} 則\n用完後定時提醒將暫停至下月 1 日`,
+    exceeded: '⚠️ 本月推播額度已用完\n定時提醒暫停至下月 1 日恢復',
+  },
+
   freq: {
     oneoff: '不重複',
     everyDays: (days: number) => `每 ${days} 天`,

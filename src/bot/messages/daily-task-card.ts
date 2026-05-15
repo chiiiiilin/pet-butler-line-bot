@@ -9,6 +9,7 @@ export function dailyTaskCard(
   tasks: TaskView[],
   intro: string,
   context: CardContext = 'today',
+  quotaWarning?: string,
 ): messagingApi.FlexMessage {
   const heroText = context === 'evening' ? 'Final Check' : 'Ready, Human?';
   const heroUrl = `https://cataas.com/cat/says/${encodeURIComponent(heroText)}?_=${Date.now()}`;
@@ -26,6 +27,18 @@ export function dailyTaskCard(
       bodyContents.push({ type: 'separator', margin: 'sm' });
     }
   });
+
+  if (quotaWarning) {
+    bodyContents.push({ type: 'separator', margin: 'md' });
+    bodyContents.push({
+      type: 'text',
+      text: quotaWarning,
+      size: 'xs',
+      color: '#d33333',
+      wrap: true,
+      margin: 'md',
+    });
+  }
 
   return {
     type: 'flex',

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { TaskService } from '../task/task.service';
 import { LineService } from '../line/line.service';
+import { QuotaService } from '../line/quota.service';
 import { dailyTaskCard } from '../bot/messages/daily-task-card';
 import { TEXT } from '../bot/messages/text';
 
@@ -14,6 +15,7 @@ export class ReminderService {
   constructor(
     private readonly task: TaskService,
     private readonly line: LineService,
+    private readonly quota: QuotaService,
   ) {}
 
   @Cron('0 9 * * *', { name: 'morning', timeZone: 'Asia/Taipei' })
@@ -29,6 +31,14 @@ export class ReminderService {
   async sendDailyReminders(
     time: ReminderTime,
   ): Promise<{ groupsNotified: number }> {
+    await this.quota.refresh();
+    const { exceeded, remaining } = this.quota.getStatus();
+    const warning = exceeded
+      ? TEXT.quota.exceeded
+      : this.quota.isLow() && remaining !== null
+        ? TEXT.quota.low(remaining)
+        : undefined;
+
     const groupIds = await this.task.findDueGroupIds();
     let groupsNotified = 0;
 
@@ -41,7 +51,9 @@ export class ReminderService {
             ? TEXT.reminder.morningIntro(tasks.length)
             : TEXT.reminder.eveningIntro(tasks.length);
         const dest = groupId.startsWith('dm:') ? groupId.slice(3) : groupId;
-        await this.line.push(dest, [dailyTaskCard(tasks, intro, time)]);
+        await this.line.push(dest, [
+          dailyTaskCard(tasks, intro, time, warning),
+        ]);
         groupsNotified++;
       } catch (e) {
         this.logger.warn(`push to ${groupId} failed: ${e}`);
