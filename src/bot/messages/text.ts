@@ -6,7 +6,7 @@ export const TEXT = {
     taskNotFound: '喵？找不到這個任務耶 ᓚ₍ ^. .^₎',
     stateErrorEdit: `小貓有點搞混了\n請重新 ${COMMAND.EDIT}`,
     guideToButtons: `請點上方按鈕操作\n或輸入 ${COMMAND.CANCEL} 離開`,
-    echo: (text: string) => `🐱小貓收到：「${text}」`,
+    unknownCommand: '喵？小貓看不懂這個指令耶\n試試下面的指令吧🐾',
     greeting: `喵嗚 我是貓貓管家🐾 \n幫你記住重要的小事\n\n輸入 ${COMMAND.CREATE} 建立任務\n輸入 ${COMMAND.HELP} 查看全部指令🐱`,
   },
 

@@ -117,7 +117,10 @@ export class BotService {
     }
 
     if (event.source.type === 'user') {
-      return reply(replyToken, [textMsg(TEXT.common.echo(trimmed))]);
+      return reply(replyToken, [
+        textMsg(TEXT.common.unknownCommand),
+        commandsHelp(),
+      ]);
     }
     return null;
   }
