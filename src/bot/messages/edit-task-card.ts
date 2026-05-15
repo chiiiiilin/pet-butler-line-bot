@@ -17,6 +17,7 @@ export function editTaskCarousel(tasks: TaskView[]): messagingApi.FlexMessage {
 
 function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
   const id = task._id;
+  const v = task.cycleVersion;
   const today = dateForPicker(new Date());
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -120,7 +121,7 @@ function editTaskBubble(task: TaskView): messagingApi.FlexBubble {
           action: {
             type: 'datetimepicker',
             label: TEXT.buttons.editDate,
-            data: `action=${ACTION.EDIT_DATE}&id=${id}`,
+            data: `action=${ACTION.EDIT_DATE}&id=${id}&v=${v}`,
             mode: 'date',
             initial,
             min: today,

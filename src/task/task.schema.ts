@@ -19,6 +19,9 @@ export class Task {
 
   @Prop({ required: true })
   nextDueAt: Date;
+
+  @Prop({ type: Number, default: 0 })
+  cycleVersion: number;
 }
 
 export type TaskDocument = HydratedDocument<Task>;

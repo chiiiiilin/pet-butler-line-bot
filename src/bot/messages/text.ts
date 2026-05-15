@@ -4,6 +4,8 @@ export const TEXT = {
   common: {
     cancelled: '🐾 已取消這次操作',
     taskNotFound: '喵？找不到這個任務耶 ᓚ₍ ^. .^₎',
+    taskAlreadyDone: '這個任務已經完成並歸檔了\n沒辦法再延後或重新完成囉🐱',
+    cardStale: '這個任務剛剛已經有人完成囉\n如要再操作請從下方列表選擇🐈‍⬛',
     stateErrorEdit: `小貓有點搞混了\n請重新 ${COMMAND.EDIT}`,
     guideToButtons: `請點上方按鈕操作\n或輸入 ${COMMAND.CANCEL} 離開`,
     unknownCommand: '喵？小貓看不懂這個指令耶\n試試下面的指令吧🐾',

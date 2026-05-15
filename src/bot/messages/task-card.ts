@@ -34,6 +34,7 @@ function taskBubble(
   nameMap: Map<string, string>,
 ): messagingApi.FlexBubble {
   const id = task._id;
+  const v = task.cycleVersion;
   const today = dateForPicker(new Date());
 
   const startOfToday = new Date();
@@ -165,7 +166,7 @@ function taskBubble(
           action: {
             type: 'postback',
             label: TEXT.buttons.complete,
-            data: `action=${ACTION.COMPLETE}&id=${id}`,
+            data: `action=${ACTION.COMPLETE}&id=${id}&v=${v}`,
             displayText: TEXT.buttons.complete,
           },
         },
@@ -176,7 +177,7 @@ function taskBubble(
           action: {
             type: 'datetimepicker',
             label: TEXT.buttons.snooze,
-            data: `action=${ACTION.SNOOZE}&id=${id}`,
+            data: `action=${ACTION.SNOOZE}&id=${id}&v=${v}`,
             mode: 'date',
             initial,
             min: today,

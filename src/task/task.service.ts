@@ -13,6 +13,7 @@ export interface TaskView {
   intervalDays: number | null;
   status: TaskStatus;
   nextDueAt: Date;
+  cycleVersion: number;
   lastCompletion: { userId: string; completedAt: Date } | null;
 }
 
@@ -46,6 +47,7 @@ export class TaskService {
       intervalDays: input.intervalDays,
       status: 'active',
       nextDueAt,
+      cycleVersion: 0,
     });
   }
 
@@ -93,9 +95,19 @@ export class TaskService {
     return result ?? null;
   }
 
-  async complete(id: string, userId: string): Promise<TaskView | null> {
+  async complete(
+    id: string,
+    userId: string,
+    expectedVersion?: number,
+  ): Promise<TaskView | 'archived' | 'stale' | null> {
     const task = await this.findDocById(id);
     if (!task) return null;
+    if (task.status === 'done') return 'archived';
+    if (
+      expectedVersion !== undefined &&
+      (task.cycleVersion ?? 0) !== expectedVersion
+    )
+      return 'stale';
     const now = new Date();
     await this.completionModel.create({
       taskId: task._id,
@@ -108,13 +120,24 @@ export class TaskService {
     } else {
       task.nextDueAt = computeNextDue(now, task.intervalDays);
     }
+    task.cycleVersion = (task.cycleVersion ?? 0) + 1;
     await task.save();
     return this.findById(id);
   }
 
-  async snooze(id: string, dateStr: string): Promise<TaskView | null> {
+  async snooze(
+    id: string,
+    dateStr: string,
+    expectedVersion?: number,
+  ): Promise<TaskView | 'archived' | 'stale' | null> {
     const task = await this.findDocById(id);
     if (!task) return null;
+    if (task.status === 'done') return 'archived';
+    if (
+      expectedVersion !== undefined &&
+      (task.cycleVersion ?? 0) !== expectedVersion
+    )
+      return 'stale';
     const [y, m, d] = dateStr.split('-').map(Number);
     if (!y || !m || !d) return null;
     const next = new Date(y, m - 1, d, DEFAULT_REMIND_HOUR, 0, 0, 0);
@@ -161,6 +184,7 @@ export class TaskService {
       intervalDays: number | null;
       status?: TaskStatus;
       nextDueAt: Date;
+      cycleVersion?: number;
       lastCompletion?: { userId: string; completedAt: Date };
     }>([
       ...pipelinePrefix,
@@ -190,6 +214,7 @@ export class TaskService {
       intervalDays: r.intervalDays ?? null,
       status: r.status ?? 'active',
       nextDueAt: r.nextDueAt,
+      cycleVersion: r.cycleVersion ?? 0,
       lastCompletion: r.lastCompletion ?? null,
     }));
   }

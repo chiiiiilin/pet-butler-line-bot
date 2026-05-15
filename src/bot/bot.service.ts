@@ -212,15 +212,21 @@ export class BotService {
     if (action === ACTION.COMPLETE) {
       const id = params.get('id');
       if (!id) return null;
-      const task = await this.task.complete(id, userId);
-      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+      const expectedVersion = parseVersion(params.get('v'));
+      const result = await this.task.complete(id, userId, expectedVersion);
+      if (result === null)
+        return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+      if (result === 'archived')
+        return reply(replyToken, [textMsg(TEXT.common.taskAlreadyDone)]);
+      if (result === 'stale')
+        return this.staleReply(replyToken, groupId, event.source);
       const displayName = await this.line.getDisplayName(userId, event.source);
       const tail =
-        task.status === 'done'
+        result.status === 'done'
           ? TEXT.task.archived
-          : TEXT.task.nextReminder(formatDate(task.nextDueAt));
+          : TEXT.task.nextReminder(formatDate(result.nextDueAt));
       return reply(replyToken, [
-        textMsg(TEXT.task.completed(task.name, displayName, tail)),
+        textMsg(TEXT.task.completed(result.name, displayName, tail)),
       ]);
     }
 
@@ -228,10 +234,16 @@ export class BotService {
       const id = params.get('id');
       const dateStr = event.postback.params?.date;
       if (!id || !dateStr) return null;
-      const task = await this.task.snooze(id, dateStr);
-      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+      const expectedVersion = parseVersion(params.get('v'));
+      const result = await this.task.snooze(id, dateStr, expectedVersion);
+      if (result === null)
+        return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+      if (result === 'archived')
+        return reply(replyToken, [textMsg(TEXT.common.taskAlreadyDone)]);
+      if (result === 'stale')
+        return this.staleReply(replyToken, groupId, event.source);
       return reply(replyToken, [
-        textMsg(TEXT.task.snoozed(task.name, formatDate(task.nextDueAt))),
+        textMsg(TEXT.task.snoozed(result.name, formatDate(result.nextDueAt))),
       ]);
     }
 
@@ -257,10 +269,18 @@ export class BotService {
       const id = params.get('id');
       const dateStr = event.postback.params?.date;
       if (!id || !dateStr) return null;
-      const task = await this.task.snooze(id, dateStr);
-      if (!task) return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+      const expectedVersion = parseVersion(params.get('v'));
+      const result = await this.task.snooze(id, dateStr, expectedVersion);
+      if (result === null)
+        return reply(replyToken, [textMsg(TEXT.common.taskNotFound)]);
+      if (result === 'archived')
+        return reply(replyToken, [textMsg(TEXT.common.taskAlreadyDone)]);
+      if (result === 'stale')
+        return this.staleReply(replyToken, groupId, event.source);
       return reply(replyToken, [
-        textMsg(TEXT.edit.dateUpdated(task.name, formatDate(task.nextDueAt))),
+        textMsg(
+          TEXT.edit.dateUpdated(result.name, formatDate(result.nextDueAt)),
+        ),
       ]);
     }
 
@@ -410,6 +430,22 @@ export class BotService {
     return 'unknown';
   }
 
+  private async staleReply(
+    replyToken: string,
+    groupId: string,
+    source: webhook.Source,
+  ): Promise<ReplyIntent> {
+    const tasks = await this.task.listByGroup(groupId);
+    if (tasks.length === 0) {
+      return reply(replyToken, [textMsg(TEXT.common.cardStale)]);
+    }
+    const nameMap = await this.resolveNames(tasks, source);
+    return reply(replyToken, [
+      textMsg(TEXT.common.cardStale),
+      taskListCarousel(tasks, nameMap),
+    ]);
+  }
+
   private async resolveNames(
     tasks: TaskView[],
     source: webhook.Source,
@@ -436,4 +472,10 @@ function reply(
   messages: messagingApi.Message[],
 ): ReplyIntent {
   return { replyToken, messages };
+}
+
+function parseVersion(raw: string | null): number | undefined {
+  if (raw === null) return undefined;
+  const v = parseInt(raw, 10);
+  return isNaN(v) ? undefined : v;
 }
