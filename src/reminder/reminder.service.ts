@@ -18,12 +18,12 @@ export class ReminderService {
     private readonly quota: QuotaService,
   ) {}
 
-  @Cron('0 9 * * *', { name: 'morning', timeZone: 'Asia/Taipei' })
+  @Cron('0 8 * * *', { name: 'morning', timeZone: 'Asia/Taipei' })
   async morningCron(): Promise<void> {
     await this.sendDailyReminders('morning');
   }
 
-  @Cron('0 21 * * *', { name: 'evening', timeZone: 'Asia/Taipei' })
+  @Cron('0 18 * * *', { name: 'evening', timeZone: 'Asia/Taipei' })
   async eveningCron(): Promise<void> {
     await this.sendDailyReminders('evening');
   }
